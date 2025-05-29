@@ -77,6 +77,46 @@ async function run() {
       }
     });
 
+    // Update user role by ID
+app.patch('/users/:id', async (req, res) => {
+  const userId = req.params.id;
+  const { role } = req.body;
+
+  try {
+    const filter = { _id: new ObjectId(userId) };
+    const updateDoc = {
+      $set: {
+        role: role,
+      },
+    };
+
+    const result = await userCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).send({ message: 'Failed to update role' });
+  }
+});
+
+app.delete('/users/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const query = { _id: new ObjectId(userId) };
+    const result = await userCollection.deleteOne(query);
+
+    if (result.deletedCount === 1) {
+      res.send({ success: true, message: 'User deleted successfully' });
+    } else {
+      res.status(404).send({ success: false, message: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).send({ success: false, message: 'Failed to delete user' });
+  }
+});
+
+
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
       const user = await userCollection.findOne({ email });
