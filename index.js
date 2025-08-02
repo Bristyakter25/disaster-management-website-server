@@ -44,6 +44,7 @@ async function run() {
     const alertPanelCollection = client.db("disasterManagementWebsite").collection("alertData");
     const userCollection = client.db("disasterManagementWebsite").collection("users");
     const profileCollection = client.db("disasterManagementWebsite").collection("profiles");
+    const resourcesCollection = client.db("disasterManagementWebsite").collection("resources");
 
     // Socket.io connection
     io.on("connection", (socket) => {
@@ -76,6 +77,15 @@ async function run() {
         res.status(500).send({ message: 'Failed to fetch users' });
       }
     });
+    app.get('/resources', async (req, res) => {
+      try {
+        const resources = await resourcesCollection.find().toArray();
+        res.send(resources);
+      } catch (error) {
+        console.error('Error fetching resources:', error);
+        res.status(500).send({ message: 'Failed to fetch resources' });
+      }
+    });
 
     // Update user role by ID
 app.patch('/users/:id', async (req, res) => {
@@ -98,6 +108,22 @@ app.patch('/users/:id', async (req, res) => {
   }
 });
 
+// edit alert data
+app.put("/alertPanel/:id", async (req, res) => {
+  const { id } = req.params;
+  const updatedData = req.body;
+
+  // 🛑 Prevent attempting to update `_id`
+  delete updatedData._id;
+
+  const result = await alertPanelCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: updatedData }
+  );
+  res.send(result);
+});
+
+
 app.delete('/users/:id', async (req, res) => {
   const userId = req.params.id;
 
@@ -115,6 +141,13 @@ app.delete('/users/:id', async (req, res) => {
     res.status(500).send({ success: false, message: 'Failed to delete user' });
   }
 });
+
+app.delete("/alertPanel/:id", async (req, res) => {
+  const { id } = req.params;
+  const result = await alertPanelCollection.deleteOne({ _id: new ObjectId(id) });
+  res.send(result);
+});
+
 
 
     app.get('/users/:email', async (req, res) => {
