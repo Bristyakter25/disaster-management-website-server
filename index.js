@@ -108,6 +108,17 @@ app.patch('/users/:id', async (req, res) => {
   }
 });
 
+app.patch("/resources/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status, location } = req.body;
+  const updated = await resourcesCollection.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    { $set: { status, location } },
+    { returnDocument: "after" }
+  );
+  res.send(updated.value);
+});
+
 // edit alert data
 app.put("/alertPanel/:id", async (req, res) => {
   const { id } = req.params;
