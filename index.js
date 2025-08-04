@@ -45,6 +45,8 @@ async function run() {
     const userCollection = client.db("disasterManagementWebsite").collection("users");
     const profileCollection = client.db("disasterManagementWebsite").collection("profiles");
     const resourcesCollection = client.db("disasterManagementWebsite").collection("resources");
+    const safetyContentsCollection = client.db("disasterManagementWebsite").collection("safetyContents");
+
 
     // Socket.io connection
     io.on("connection", (socket) => {
@@ -124,7 +126,6 @@ app.put("/alertPanel/:id", async (req, res) => {
   const { id } = req.params;
   const updatedData = req.body;
 
-  // 🛑 Prevent attempting to update `_id`
   delete updatedData._id;
 
   const result = await alertPanelCollection.updateOne(
@@ -166,6 +167,11 @@ app.delete("/alertPanel/:id", async (req, res) => {
       const user = await userCollection.findOne({ email });
       res.send(user);
     });
+
+    app.get('/safetyContents', async(req,res) =>{
+      const data = await safetyContentsCollection.find().toArray();
+      res.send(data);
+    })
 
     // Get all alerts
     // app.get("/alertPanel", async (req, res) => {
