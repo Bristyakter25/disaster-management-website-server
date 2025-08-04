@@ -48,15 +48,15 @@ async function run() {
 
     // Socket.io connection
     io.on("connection", (socket) => {
-  console.log("📡 New client connected:", socket.id);
+  console.log(" New client connected:", socket.id);
 
   socket.on("newAlert", (alert) => {
-    console.log("🆕 Broadcasting new alert:", alert);
+    console.log(" Broadcasting new alert:", alert);
     socket.broadcast.emit("newAlert", alert); // send to all except sender
   });
 
   socket.on("disconnect", () => {
-    console.log("🔌 Client disconnected:", socket.id);
+    console.log(" Client disconnected:", socket.id);
   });
 });
 
@@ -168,15 +168,33 @@ app.delete("/alertPanel/:id", async (req, res) => {
     });
 
     // Get all alerts
+    // app.get("/alertPanel", async (req, res) => {
+    //   try {
+    //     const result = await alertPanelCollection.find().toArray();
+    //     res.send(result);
+    //   } catch (error) {
+    //     console.error("Error fetching alert data:", error);
+    //     res.status(500).send({ message: "Failed to fetch alert data" });
+    //   }
+    // });
+
     app.get("/alertPanel", async (req, res) => {
-      try {
-        const result = await alertPanelCollection.find().toArray();
-        res.send(result);
-      } catch (error) {
-        console.error("Error fetching alert data:", error);
-        res.status(500).send({ message: "Failed to fetch alert data" });
-      }
-    });
+  try {
+    const email = req.query.email;
+
+    let query = {};
+    if (email) {
+      query = { "submittedBy.email": email };
+    }
+
+    const result = await alertPanelCollection.find(query).toArray();
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching alert data:", error);
+    res.status(500).send({ message: "Failed to fetch alert data" });
+  }
+});
+
 
     app.get("/alertPanel/:id", async (req, res) => {
       try {
