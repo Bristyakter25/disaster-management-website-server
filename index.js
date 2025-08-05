@@ -49,6 +49,7 @@ async function run() {
     const profileCollection = client.db("disasterManagementWebsite").collection("profiles");
     const resourcesCollection = client.db("disasterManagementWebsite").collection("resources");
     const safetyContentsCollection = client.db("disasterManagementWebsite").collection("safetyContents");
+    const blogPostsCollection = client.db("disasterManagementWebsite").collection("blogPosts");
 
 
     // Socket.io connection
@@ -92,17 +93,48 @@ async function run() {
       }
     });
 
-    app.get('/blogPosts', async (req, res) => {
+//     app.get('/blogPosts', async (req, res) => {
+//   try {
+//     const response = await fetch(
+//       `https://newsapi.org/v2/top-headlines?sources=techcrunch&pageSize=6&apiKey=${NEWS_API_KEY}`
+//     );
+//     const data = await response.json();
+//     res.json(data);
+//   } catch (error) {
+//     res.status(500).json({ error: 'Failed to fetch news' });
+//   }
+// });
+
+  //  get blog posts
+    app.get("/blogPosts", async(req,res) =>{
+      const data = await blogPostsCollection.find().toArray();
+      res.send(data);
+    })
+
+    app.get("/blogPosts/:id", async (req, res) => {
   try {
-    const response = await fetch(
-      `https://newsapi.org/v2/top-headlines?sources=techcrunch&pageSize=6&apiKey=${NEWS_API_KEY}`
-    );
-    const data = await response.json();
-    res.json(data);
+    const id = req.params.id;
+
+    // Validate ObjectId format to avoid errors
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ error: "Invalid ID format" });
+    }
+
+    const blog = await db.collection("blogPosts").findOne({ _id: new ObjectId(id) });
+
+    if (!blog) {
+      return res.status(404).send({ error: "Blog post not found" });
+    }
+
+    res.json(blog);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch news' });
+    console.error("Error fetching blog post:", error);
+    res.status(500).send({ error: "Server error" });
   }
 });
+
+
+
 
     // Update user role by ID
 app.patch('/users/:id', async (req, res) => {
