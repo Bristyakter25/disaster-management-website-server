@@ -9,6 +9,9 @@ const getCoordinates = require("./geocode");
 const app = express();
 const port = process.env.PORT || 5000;
 
+// API key
+const NEWS_API_KEY = process.env.NEWS_API_KEY;
+
 // Create HTTP server
 const server = http.createServer(app);
 
@@ -88,6 +91,18 @@ async function run() {
         res.status(500).send({ message: 'Failed to fetch resources' });
       }
     });
+
+    app.get('/blogPosts', async (req, res) => {
+  try {
+    const response = await fetch(
+      `https://newsapi.org/v2/top-headlines?sources=techcrunch&pageSize=6&apiKey=${NEWS_API_KEY}`
+    );
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch news' });
+  }
+});
 
     // Update user role by ID
 app.patch('/users/:id', async (req, res) => {
