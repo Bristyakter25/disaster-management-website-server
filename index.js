@@ -50,6 +50,7 @@ async function run() {
     const resourcesCollection = client.db("disasterManagementWebsite").collection("resources");
     const safetyContentsCollection = client.db("disasterManagementWebsite").collection("safetyContents");
     const blogPostsCollection = client.db("disasterManagementWebsite").collection("blogPosts");
+    const missionsCollection = client.db("disasterManagementWebsite").collection("missions");
 
 
     // Socket.io connection
@@ -62,7 +63,7 @@ async function run() {
   });
 
   socket.on("disconnect", () => {
-    console.log(" Client disconnected:", socket.id);
+    console.log(" Client disconnected", socket.id);
   });
 });
 
@@ -93,17 +94,7 @@ async function run() {
       }
     });
 
-//     app.get('/blogPosts', async (req, res) => {
-//   try {
-//     const response = await fetch(
-//       `https://newsapi.org/v2/top-headlines?sources=techcrunch&pageSize=6&apiKey=${NEWS_API_KEY}`
-//     );
-//     const data = await response.json();
-//     res.json(data);
-//   } catch (error) {
-//     res.status(500).json({ error: 'Failed to fetch news' });
-//   }
-// });
+
 
   //  get blog posts
     app.get("/blogPosts", async(req,res) =>{
@@ -111,16 +102,15 @@ async function run() {
       res.send(data);
     })
 
-    app.get("/blogPosts/:id", async (req, res) => {
+   app.get("/blogPosts/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    // Validate ObjectId format to avoid errors
     if (!ObjectId.isValid(id)) {
       return res.status(400).send({ error: "Invalid ID format" });
     }
 
-    const blog = await db.collection("blogPosts").findOne({ _id: new ObjectId(id) });
+    const blog = await blogPostsCollection.findOne({ _id: new ObjectId(id) });
 
     if (!blog) {
       return res.status(404).send({ error: "Blog post not found" });
@@ -132,8 +122,6 @@ async function run() {
     res.status(500).send({ error: "Server error" });
   }
 });
-
-
 
 
     // Update user role by ID
@@ -350,6 +338,60 @@ app.post("/alertPanel", async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
+
+    // Assign mission routes
+  
+    app.get("/missions",async(req,res) =>{
+      const data = await missionsCollection.find().toArray();
+      res.send(data);
+    })
+
+app.post("/missions", async (req, res) => {
+  const {
+    title,
+    description,
+    severity,
+    notes,
+    assignedTo,
+    location, // This is the address string
+  } = req.body;
+
+  // Basic validation
+  if (!title || !assignedTo || !location) {
+    return res.status(400).json({ error: "Missing required fields." });
+  }
+
+  try {
+    const { lat, lng } = await getCoordinates(location);
+
+    const mission = {
+      title,
+      description: description || "",
+      severity: severity || "Low",
+      notes: notes || "",
+      assignedTo,
+      location: {
+        address: location,
+        lat,
+        lng,
+      },
+      status: "Pending",
+      createdAt: new Date(),
+    };
+
+    const result = await missionsCollection.insertOne(mission);
+
+    res.status(201).json({
+      message: "Mission assigned successfully.",
+      missionId: result.insertedId,
+    });
+  } catch (error) {
+    console.error("Mission creation failed:", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 
   } catch (error) {
     console.error("MongoDB connection error:", error);
