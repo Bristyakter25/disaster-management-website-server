@@ -9,6 +9,10 @@ const getCoordinates = require("./geocode");
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Payment Gateway
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+
 // API key
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
 
@@ -19,7 +23,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*", // Change to specific origin in production
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
   }
 });
 
@@ -51,6 +55,7 @@ async function run() {
     const safetyContentsCollection = client.db("disasterManagementWebsite").collection("safetyContents");
     const blogPostsCollection = client.db("disasterManagementWebsite").collection("blogPosts");
     const missionsCollection = client.db("disasterManagementWebsite").collection("missions");
+    const paymentsCollection = client.db("disasterManagementWebsite").collection("payments");
 
 
     // Socket.io connection
@@ -390,6 +395,41 @@ app.post("/missions", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// payment integration
+app.post("/create-payment-intent", async (req, res) => {
+  try {
+    const { amount } = req.body; // in cents (USD) or smallest unit of currency
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: "usd", // use your currency
+      automatic_payment_methods: { enabled: true },
+    });
+
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+app.post("/save-payment", async (req, res) => {
+  try {
+    const paymentData = req.body;
+    const result = await paymentsCollection.insertOne(paymentData);
+    res.send({ success: true, id: result.insertedId });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
+
+app.get("/paymentsInfo", async(req,res) =>{
+  const data = await paymentsCollection.find().toArray();
+  res.send(data);
+})
+
 
 
 
