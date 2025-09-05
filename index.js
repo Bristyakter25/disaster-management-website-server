@@ -240,6 +240,22 @@ app.delete("/alertPanel/:id", async (req, res) => {
     res.status(500).send({ message: "Failed to fetch alert data" });
   }
 });
+    app.get("/alertPanel/donations", async (req, res) => {
+  try {
+    // const email = req.query.email;
+
+    // let query = {};
+    // if (email) {
+    //   query = { "submittedBy.email": email };
+    // }
+
+    const result = await alertPanelCollection.find({donationNeeded : true}).toArray();
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching alert data:", error);
+    res.status(500).send({ message: "Failed to fetch alert data" });
+  }
+});
 
 
     app.get("/alertPanel/:id", async (req, res) => {
