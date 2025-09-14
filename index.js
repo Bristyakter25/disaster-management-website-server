@@ -56,6 +56,7 @@ async function run() {
     const blogPostsCollection = client.db("disasterManagementWebsite").collection("blogPosts");
     const missionsCollection = client.db("disasterManagementWebsite").collection("missions");
     const paymentsCollection = client.db("disasterManagementWebsite").collection("payments");
+    const donationCollection = client.db("disasterManagementWebsite").collection("donations");
 
 
     // Socket.io connection
@@ -240,6 +241,8 @@ app.delete("/alertPanel/:id", async (req, res) => {
     res.status(500).send({ message: "Failed to fetch alert data" });
   }
 });
+
+// Donation's API
     app.get("/alertPanel/donations", async (req, res) => {
   try {
     // const email = req.query.email;
@@ -256,6 +259,86 @@ app.delete("/alertPanel/:id", async (req, res) => {
     res.status(500).send({ message: "Failed to fetch alert data" });
   }
 });
+
+app.get("/alertPanel/donations/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await alertPanelCollection.findOne({ _id: new ObjectId(id) });
+    res.send(result);
+  } catch (error) {
+    console.error("Error fetching donation details:", error);
+    res.status(500).send({ message: "Failed to fetch donation details" });
+  }
+});
+
+
+
+// Save donor info before payment
+app.post("/alertPanel/save-donation", async (req, res) => {
+  try {
+    const { donor, disaster, amount, date } = req.body;
+
+   if (!donor?.name || !donor?.email || !disaster?._id || !amount) {
+  return res.status(400).send({ message: "Incomplete donation info" });
+}
+
+    const donationDoc = {
+      donor,
+      disaster,
+      amount,
+      date: new Date(date),
+      status: "pending", // pending until payment succeeds
+    };
+
+    const result = await donationCollection.insertOne(donationDoc);
+    res.send({ success: true, id: result.insertedId });
+  } catch (error) {
+    console.error("Error saving donation info:", error);
+    res.status(500).send({ message: "Failed to save donation info" });
+  }
+});
+
+// Update donation after payment success
+app.post("/alertPanel/donation-success/:donationId", async (req, res) => {
+  try {
+    const { donationId } = req.params;
+    const { paymentId } = req.body;
+
+    // 1. Update the donor record status to 'completed'
+    await donationCollection.updateOne(
+      { _id: new ObjectId(donationId) },
+      { $set: { status: "completed", paymentId } }
+    );
+
+    // 2. Fetch the donation document
+    const donationDoc = await donationCollection.findOne({ _id: new ObjectId(donationId) });
+    if (donationDoc) {
+      // Ensure amount is numeric
+      const donationAmount = Number(donationDoc.amount) || 0;
+
+      await alertPanelCollection.updateOne(
+        { _id: new ObjectId(donationDoc.disaster._id) },
+        {
+          $inc: { donationReceived: donationAmount },
+          $push: {
+            donors: {
+              name: donationDoc.donor.name,
+              email: donationDoc.donor.email,
+              amount: donationAmount,
+              date: donationDoc.date,
+            },
+          },
+        }
+      );
+    }
+
+    res.send({ success: true });
+  } catch (error) {
+    console.error("Error processing donation success:", error);
+    res.status(500).send({ message: "Failed to process donation success" });
+  }
+});
+
 
 
     app.get("/alertPanel/:id", async (req, res) => {
@@ -431,15 +514,15 @@ app.post("/create-payment-intent", async (req, res) => {
   }
 });
 
-app.post("/save-payment", async (req, res) => {
-  try {
-    const paymentData = req.body;
-    const result = await paymentsCollection.insertOne(paymentData);
-    res.send({ success: true, id: result.insertedId });
-  } catch (error) {
-    res.status(500).send({ error: error.message });
-  }
-});
+// app.post("/save-payment", async (req, res) => {
+//   try {
+//     const paymentData = req.body;
+//     const result = await paymentsCollection.insertOne(paymentData);
+//     res.send({ success: true, id: result.insertedId });
+//   } catch (error) {
+//     res.status(500).send({ error: error.message });
+//   }
+// });
 
 app.get("/paymentsInfo", async(req,res) =>{
   const data = await paymentsCollection.find().toArray();
