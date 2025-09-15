@@ -445,10 +445,28 @@ app.post("/alertPanel", async (req, res) => {
 
     // Assign mission routes
   
-    app.get("/missions",async(req,res) =>{
-      const data = await missionsCollection.find().toArray();
-      res.send(data);
-    })
+    app.get("/missions", async (req, res) => {
+  const { assignedTo } = req.query; // email from frontend
+  try {
+    const data = await missionsCollection.find({ assignedTo }).toArray();
+    res.send(data);
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
+
+    app.get("/missions/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const mission = await missionsCollection.findOne({ _id: new ObjectId(id) });
+        if (!mission) return res.status(404).send({ message: "Mission not found" });
+        res.send(mission);
+      } catch (error) {
+        console.error("Error fetching mission by ID:", error);
+        res.status(500).send({ message: "Failed to fetch mission" });
+      }
+    });
 
 app.post("/missions", async (req, res) => {
   const {
