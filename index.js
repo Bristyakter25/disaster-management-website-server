@@ -22,7 +22,7 @@ const server = http.createServer(app);
 // Initialize socket.io with CORS config
 const io = new Server(server, {
   cors: {
-    origin: "*", // Change to specific origin in production
+    origin: "*", 
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
   }
 });
@@ -45,8 +45,8 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.db("admin").command({ ping: 1 });
-    console.log(" Connected to MongoDB");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(" Connected to MongoDB");
 
     const alertPanelCollection = client.db("disasterManagementWebsite").collection("alertData");
     const userCollection = client.db("disasterManagementWebsite").collection("users");
