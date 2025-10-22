@@ -57,6 +57,8 @@ async function run() {
     const missionsCollection = client.db("disasterManagementWebsite").collection("missions");
     const paymentsCollection = client.db("disasterManagementWebsite").collection("payments");
     const donationCollection = client.db("disasterManagementWebsite").collection("donations");
+    const helpsCollection = client.db("disasterManagementWebsite").collection("requestHelps");
+
 
 
     // Socket.io connection
@@ -339,6 +341,27 @@ app.post("/alertPanel/donation-success/:donationId", async (req, res) => {
   }
 });
 
+// request helps APIS
+
+app.get("/requestHelps", async (req, res) => {
+  const requests = await helpsCollection.find().toArray();
+  res.send(requests);
+});
+
+
+app.post("/requestHelps", async (req, res) => {
+  try {
+    const data = req.body;
+    const result = await helpsCollection.insertOne({
+      ...data,
+      date: new Date(),
+      status: "Pending"
+    });
+    res.send({ success: true, result });
+  } catch (error) {
+    res.status(500).send({ success: false, message: error.message });
+  }
+});
 
 
     app.get("/alertPanel/:id", async (req, res) => {
