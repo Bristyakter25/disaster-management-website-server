@@ -273,7 +273,11 @@ app.get("/alertPanel/donations/:id", async (req, res) => {
   }
 });
 
-
+// get only donation info or payment info
+app.get("/paymentsInfo", async(req,res) =>{
+  const data = await donationCollection.find().toArray();
+  res.send(data);
+})
 
 // Save donor info before payment
 app.post("/alertPanel/save-donation", async (req, res) => {
@@ -619,10 +623,10 @@ app.post("/create-payment-intent", async (req, res) => {
 //   }
 // });
 
-app.get("/paymentsInfo", async(req,res) =>{
-  const data = await paymentsCollection.find().toArray();
-  res.send(data);
-})
+// app.get("/paymentsInfo", async(req,res) =>{
+//   const data = await paymentsCollection.find().toArray();
+//   res.send(data);
+// })
 
 
 
