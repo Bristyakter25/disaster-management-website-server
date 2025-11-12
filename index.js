@@ -343,9 +343,23 @@ app.post("/alertPanel/donation-success/:donationId", async (req, res) => {
 
 // request helps APIS
 
+
 app.get("/requestHelps", async (req, res) => {
-  const requests = await helpsCollection.find().toArray();
-  res.send(requests);
+  try {
+    const { contact } = req.query; // e.g. ?contact=bristy@error.com
+    let query = {};
+
+    // Only show requests for the logged-in user's email if provided
+    if (contact) {
+      query = { contact: contact };
+    }
+
+    const results = await helpsCollection.find(query).toArray();
+    res.send(results);
+  } catch (error) {
+    console.error("Error fetching help requests:", error);
+    res.status(500).send({ message: "Failed to fetch help requests" });
+  }
 });
 
 
@@ -362,6 +376,46 @@ app.post("/requestHelps", async (req, res) => {
     res.status(500).send({ success: false, message: error.message });
   }
 });
+
+
+app.get("/requestHelps/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const alert = await helpsCollection.findOne({ _id: new ObjectId(id) });
+        if (!alert) return res.status(404).send({ message: "Help requests not found" });
+        res.send(alert);
+      } catch (error) {
+        console.error("Error fetching alert by ID:", error);
+        res.status(500).send({ message: "Failed to fetch help requests" });
+      }
+    });
+app.put("/requestHelps/:id", async (req, res) => {
+  const { id } = req.params;
+  const updatedData = req.body;
+  const result = await helpsCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: updatedData }
+  );
+  res.send(result);
+});
+
+app.delete("/requestHelps/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await helpsCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: "Help request not found" });
+    }
+
+    res.send({ deletedCount: result.deletedCount });
+  } catch (error) {
+    console.error("Error deleting help request:", error);
+    res.status(500).send({ message: "Failed to delete help request" });
+  }
+});
+
+
 
 
     app.get("/alertPanel/:id", async (req, res) => {
