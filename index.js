@@ -594,6 +594,87 @@ app.post("/missions", async (req, res) => {
   }
 });
 
+app.patch("/missions/:id/status", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body; // e.g. "In-Progress", "Completed", "Cancelled"
+
+    if (!status) {
+      return res.status(400).send({ message: "Status field is required." });
+    }
+
+    const result = await missionsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status } }
+    );
+
+    res.send({ message: "Mission status updated successfully.", result });
+  } catch (error) {
+    console.error("Error updating mission status:", error);
+    res.status(500).send({ message: "Failed to update mission status." });
+  }
+});
+
+app.patch("/missions/:id/resources", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { details } = req.body;
+
+    if (!details) {
+      return res.status(400).json({ message: "Resource request details are required." });
+    }
+
+    const result = await missionsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          resourceRequest: {
+            requested: true,
+            details,
+            requestedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.send({ message: "Resource request submitted.", result });
+  } catch (error) {
+    console.error("Error requesting resources:", error);
+    res.status(500).send({ message: "Failed to submit resource request." });
+  }
+});
+
+app.patch("/missions/:id/postMission", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { summary, photos } = req.body;
+
+    if (!summary) {
+      return res.status(400).json({ message: "Post mission summary is required." });
+    }
+
+    const result = await missionsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          postMission: {
+            summary,
+            photos: photos || [], // optional array
+            submittedAt: new Date()
+          },
+          status: "Completed"
+        }
+      }
+    );
+
+    res.send({ message: "Post mission details updated.", result });
+  } catch (error) {
+    console.error("Error uploading post mission:", error);
+    res.status(500).send({ message: "Failed to upload post mission data." });
+  }
+});
+
+
 // payment integration
 app.post("/create-payment-intent", async (req, res) => {
   try {
