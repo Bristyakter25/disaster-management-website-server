@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
+ 
   "author": "",
   "license": "ISC",
   "description": "",
@@ -16,7 +17,10 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "mongodb": "^6.16.0",
+    "nodemailer": "^7.0.10",
     "socket.io": "^4.8.1",
     "stripe": "^18.4.0"
   }
+  
+  
 }

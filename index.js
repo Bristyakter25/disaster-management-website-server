@@ -11,7 +11,8 @@ const port = process.env.PORT || 5000;
 
 // Payment Gateway
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
+// email alert
+const sendAlertEmail = require("./utils/email"); // import your email.js
 
 // API key
 const NEWS_API_KEY = process.env.NEWS_API_KEY;
@@ -59,7 +60,19 @@ async function run() {
     const donationCollection = client.db("disasterManagementWebsite").collection("donations");
     const helpsCollection = client.db("disasterManagementWebsite").collection("requestHelps");
 
-
+async function getRecipientsEmails() {
+  try {
+    const users = await userCollection.find().toArray();
+    // Only take emails of users who want to receive alerts
+    const emails = users
+      .filter(u => u.email) // make sure email exists
+      .map(u => u.email);
+    return emails;
+  } catch (error) {
+    console.error("Error fetching recipient emails:", error);
+    return []; // return empty array if error occurs
+  }
+}
 
     // Socket.io connection
     io.on("connection", (socket) => {
@@ -459,20 +472,60 @@ app.delete("/requestHelps/:id", async (req, res) => {
 
 
 
+// app.post("/alertPanel", async (req, res) => {
+//   try {
+//     const newAlert = req.body;
+
+//     // Automatically fetch coordinates based on location field
+//     const coordinates = await getCoordinates(newAlert.location);
+//     newAlert.coordinates = coordinates;
+
+//     const result = await alertPanelCollection.insertOne(newAlert);
+
+//     const insertedAlert = await alertPanelCollection.findOne({ _id: result.insertedId });
+
+//     // Emit to all clients
+//     io.emit("newAlert", insertedAlert);
+
+//     res.send(insertedAlert);
+//   } catch (error) {
+//     console.error("Failed to insert alert:", error);
+//     res.status(500).send({ message: "Failed to add alert" });
+//   }
+// });
+
+ // optional helper
+
+// POST /alertPanel
 app.post("/alertPanel", async (req, res) => {
   try {
     const newAlert = req.body;
 
-    // Automatically fetch coordinates based on location field
+    // Automatically fetch coordinates based on location
     const coordinates = await getCoordinates(newAlert.location);
     newAlert.coordinates = coordinates;
 
+    // Insert alert into DB
     const result = await alertPanelCollection.insertOne(newAlert);
-
     const insertedAlert = await alertPanelCollection.findOne({ _id: result.insertedId });
 
-    // Emit to all clients
+    // Emit to all connected clients
     io.emit("newAlert", insertedAlert);
+
+    // --- Fetch all user emails from users collection ---
+    try {
+      const users = await userCollection.find({}, { projection: { email: 1, _id: 0 } }).toArray();
+      const recipients = users.map(user => user.email); // array of emails
+
+      if (recipients.length > 0) {
+        await sendAlertEmail(insertedAlert, recipients);
+        console.log("✅ Alert emails sent successfully to all users");
+      } else {
+        console.log("⚠️ No recipients found in the database");
+      }
+    } catch (emailError) {
+      console.error("❌ Failed to send alert emails:", emailError);
+    }
 
     res.send(insertedAlert);
   } catch (error) {
@@ -480,6 +533,7 @@ app.post("/alertPanel", async (req, res) => {
     res.status(500).send({ message: "Failed to add alert" });
   }
 });
+
 
 
 
