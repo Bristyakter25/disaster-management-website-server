@@ -406,6 +406,29 @@ app.get("/requestHelps/:id", async (req, res) => {
         res.status(500).send({ message: "Failed to fetch help requests" });
       }
     });
+
+
+    app.patch("/requestHelps/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+
+    const result = await helpsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).send({ message: "Request not found or already updated" });
+    }
+
+    res.send({ message: "Status updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Failed to update status" });
+  }
+});
+
 app.put("/requestHelps/:id", async (req, res) => {
   const { id } = req.params;
   const updatedData = req.body;
