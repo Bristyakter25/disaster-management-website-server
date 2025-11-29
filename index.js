@@ -568,33 +568,40 @@ app.post("/alertPanel", async (req, res) => {
   try {
     const newAlert = req.body;
 
-    // Generate coordinates
+    // Get coordinates
     const coordinates = await getCoordinates(newAlert.location);
     newAlert.coordinates = coordinates;
 
+    // Save alert to DB
     const result = await alertPanelCollection.insertOne(newAlert);
     const insertedAlert = await alertPanelCollection.findOne({ _id: result.insertedId });
 
-    
+    // Realtime broadcast
     io.emit("newAlert", insertedAlert);
 
-    //  Send email only if alert is Active
+    // ◼ EMAIL TRIGGER ONLY WHEN STATUS === ACTIVE
     if (insertedAlert.status === "Active") {
-      const users = await userCollection.find({}, { projection: { email: 1, _id: 0 } }).toArray();
+      const users = await userCollection
+        .find({}, { projection: { email: 1, _id: 0 } })
+        .toArray();
+
       const recipients = users.map(u => u.email);
 
       if (recipients.length > 0) {
+        console.log("📨 Sending alert email to", recipients.length, "users...");
         await sendAlertEmail(insertedAlert, recipients);
-        console.log(" Live alert email sent to all users");
+        console.log("✅ Email sent for ACTIVE alert");
+      } else {
+        console.log("⚠ No user emails found — alert stored but no notifications sent");
       }
     } else {
-      console.log("ℹ Alert saved without email (not Active)");
+      console.log("ℹ Alert created but email not sent — status:", insertedAlert.status);
     }
 
     res.send(insertedAlert);
 
   } catch (error) {
-    console.error("Failed to insert alert:", error);
+    console.error("🚨 Failed to insert alert:", error);
     res.status(500).send({ message: "Failed to add alert" });
   }
 });

@@ -1,52 +1,60 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-// Gmail SMTP setup
+// Gmail OAuth2 transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false, // use TLS, not SSL
+  service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+    type: "OAuth2",
+    user: process.env.SENDER_EMAIL,
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+  }
 });
 
+/**
+ * Send email alert when disaster status becomes ACTIVE
+ * @param {*} disaster - disaster object (headline, severity, type, location etc.)
+ * @param {Array} recipients - list of emails to notify
+ */
 async function sendAlertEmail(disaster, recipients) {
   try {
-    // Construct the URL to view full alert details
     const alertUrl = "https://disaster-management-webs-4958b.web.app/liveAlerts";
 
     const info = await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      bcc: recipients,
+      from: process.env.SENDER_EMAIL,
+      bcc: recipients, // sends to multiple recipients without exposing emails
       subject: `🚨 Active Disaster Alert: ${disaster.headline}`,
       text: `
-A new disaster has been marked as ACTIVE.
+Active Disaster Notification:
 
 Headline: ${disaster.headline}
 Type: ${disaster.type}
 Severity: ${disaster.severity}
 Location: ${disaster.location}
 
-Reported By: ${disaster.submittedBy?.name} (${disaster.submittedBy?.email})
+Reported by: ${disaster.submittedBy?.name} (${disaster.submittedBy?.email})
 
-Check the system for full details here: ${alertUrl}
+View full alert: ${alertUrl}
       `,
       html: `
-<p>A new disaster has been marked as <strong>ACTIVE</strong>.</p>
-<p><strong>Headline:</strong> ${disaster.headline}</p>
-<p><strong>Type:</strong> ${disaster.type}</p>
-<p><strong>Severity:</strong> ${disaster.severity}</p>
-<p><strong>Location:</strong> ${disaster.location}</p>
-<p><strong>Reported By:</strong> ${disaster.submittedBy?.name} (${disaster.submittedBy?.email})</p>
-<p>Check the system for full details: <a href="${alertUrl}">View Alert</a></p>
-      `,
+<div style="font-family:Arial;font-size:15px">
+  <p><strong style="color:red">🚨 A disaster has been marked ACTIVE</strong></p>
+  <p><strong>Headline:</strong> ${disaster.headline}</p>
+  <p><strong>Type:</strong> ${disaster.type}</p>
+  <p><strong>Severity:</strong> ${disaster.severity}</p>
+  <p><strong>Location:</strong> ${disaster.location}</p>
+  <p><strong>Reported By:</strong> ${disaster.submittedBy?.name} (${disaster.submittedBy?.email})</p>
+  <p><a href="${alertUrl}" target="_blank">🔗 View Full Details</a></p>
+</div>
+      `
     });
 
-    console.log("✅ Alert emails sent successfully:", info.messageId);
-  } catch (err) {
-    console.error("❌ Failed to send alert emails:", err);
+    console.log("📩 Alert mail sent successfully →", info.messageId);
+
+  } catch (error) {
+    console.error("❌ Email sending failed:", error);
   }
 }
 
