@@ -456,20 +456,62 @@ app.delete("/requestHelps/:id", async (req, res) => {
 });
 
 
+    // Backend: get active emergency alerts
+app.get("/alertPanel/emergency", async (req, res) => {
+  try {
+    const alerts = await alertPanelCollection
+      .find({ status: { $in: ["Active", "Acknowledged"] }, severity: { $in: ["High", "Critical"] } })
+      .sort({ timestamp: -1 })
+      .toArray();
+    res.send(alerts);
+  } catch (err) {
+    console.error("Failed to fetch emergency alerts", err);
+    res.status(500).send({ message: "Error fetching alerts" });
+  }
+});
+
+// PATCH alert status by ID
+app.patch("/alertPanel/:id/acknowledge", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await alertPanelCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { status: "Acknowledged" } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).send({ message: "Alert not found or already acknowledged" });
+    }
+
+    const updatedAlert = await alertPanelCollection.findOne({ _id: new ObjectId(id) });
+    res.send(updatedAlert);
+  } catch (error) {
+    console.error("Failed to acknowledge alert:", error);
+    res.status(500).send({ message: "Error updating alert" });
+  }
+});
 
 
-    app.get("/alertPanel/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const alert = await alertPanelCollection.findOne({ _id: new ObjectId(id) });
-        if (!alert) return res.status(404).send({ message: "Alert not found" });
-        res.send(alert);
-      } catch (error) {
-        console.error("Error fetching alert by ID:", error);
-        res.status(500).send({ message: "Failed to fetch alert" });
-      }
-    });
+app.get("/alertPanel/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ message: "Invalid alert ID" });
+    }
+
+    const alert = await alertPanelCollection.findOne({ _id: new ObjectId(id) });
+
+    if (!alert) {
+      return res.status(404).send({ message: "Alert not found" });
+    }
+
+    res.send(alert);
+  } catch (error) {
+    console.error("Error fetching alert by ID:", error);
+    res.status(500).send({ message: "Failed to fetch alert" });
+  }
+});
     // Latest 6 alerts
     app.get("/latestAlerts", async (req, res) => {
       try {
@@ -492,6 +534,8 @@ app.delete("/requestHelps/:id", async (req, res) => {
         res.status(500).send({ message: "Failed to fetch alert" });
       }
     });
+
+
 
 
 
@@ -524,38 +568,37 @@ app.post("/alertPanel", async (req, res) => {
   try {
     const newAlert = req.body;
 
-    // Automatically fetch coordinates based on location
+    // Generate coordinates
     const coordinates = await getCoordinates(newAlert.location);
     newAlert.coordinates = coordinates;
 
-    // Insert alert into DB
     const result = await alertPanelCollection.insertOne(newAlert);
     const insertedAlert = await alertPanelCollection.findOne({ _id: result.insertedId });
 
-    // Emit to all connected clients
+    
     io.emit("newAlert", insertedAlert);
 
-    // --- Fetch all user emails from users collection ---
-    try {
+    //  Send email only if alert is Active
+    if (insertedAlert.status === "Active") {
       const users = await userCollection.find({}, { projection: { email: 1, _id: 0 } }).toArray();
-      const recipients = users.map(user => user.email); // array of emails
+      const recipients = users.map(u => u.email);
 
       if (recipients.length > 0) {
         await sendAlertEmail(insertedAlert, recipients);
-        console.log("✅ Alert emails sent successfully to all users");
-      } else {
-        console.log("⚠️ No recipients found in the database");
+        console.log(" Live alert email sent to all users");
       }
-    } catch (emailError) {
-      console.error("❌ Failed to send alert emails:", emailError);
+    } else {
+      console.log("ℹ Alert saved without email (not Active)");
     }
 
     res.send(insertedAlert);
+
   } catch (error) {
     console.error("Failed to insert alert:", error);
     res.status(500).send({ message: "Failed to add alert" });
   }
 });
+
 
 
 
