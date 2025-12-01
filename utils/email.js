@@ -3,15 +3,17 @@ require("dotenv").config();
 
 // 🔥 Gmail SMTP for production (Render)
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+  host: "smtp.gmail.com",
   port: 587,
-  secure: false,            // TLS (not SSL)
-  requireTLS: true,         // force TLS, required on cloud hosts
+  secure: false,
+  requireTLS: true,
   auth: {
-    user: process.env.EMAIL_USER,   // must be Gmail
-    pass: process.env.EMAIL_PASS,   // must be App Password (NOT normal Gmail password)
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 10000, // 10 seconds
 });
+
 
 // 🔥 Main Send Function
 async function sendAlertEmail(disaster, recipients) {
