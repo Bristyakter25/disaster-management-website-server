@@ -1,17 +1,15 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-// 🔥 Gmail SMTP for production (Render)
+// 🔥 Brevo SMTP for production (Render)
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  requireTLS: true,
+  host: process.env.SMTP_HOST,   // smtp-relay.brevo.com
+  port: process.env.SMTP_PORT,   // 587
+  secure: false,                 // TLS, not SSL
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.SMTP_USER, // your Brevo login email
+    pass: process.env.SMTP_PASS, // your Brevo SMTP key
   },
-  connectionTimeout: 10000, // 10 seconds
 });
 
 
