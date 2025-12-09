@@ -117,6 +117,7 @@ async function getRecipientsEmails() {
 
 
 
+
   //  get blog posts
     app.get("/blogPosts", async(req,res) =>{
       const data = await blogPostsCollection.find().toArray();
@@ -168,14 +169,25 @@ app.patch('/users/:id', async (req, res) => {
 
 app.patch("/resources/:id", async (req, res) => {
   const { id } = req.params;
-  const { status, location } = req.body;
-  const updated = await resourcesCollection.findOneAndUpdate(
-    { _id: new ObjectId(id) },
-    { $set: { status, location } },
-    { returnDocument: "after" }
-  );
-  res.send(updated.value);
+  const { newDispatch } = req.body; // { location, dispatchedAt }
+
+  if (!newDispatch) return res.status(400).send({ message: "No dispatch info provided" });
+
+  try {
+    const updated = await resourcesCollection.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $push: { dispatches: newDispatch } }, // append dispatch
+      { returnDocument: "after" }
+    );
+
+    res.send(updated.value);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Failed to update resource" });
+  }
 });
+
+
 
 // edit alert data
 app.put("/alertPanel/:id", async (req, res) => {
